@@ -1,0 +1,58 @@
+---
+# Main playbook to deploy entire DevOps Lab infrastructure
+
+- name: Deploy Base Configuration to All Servers
+  hosts: linux
+  gather_facts: true
+  become: true
+  roles:
+    - base-security
+
+- name: Configure DNS Server
+  hosts: dns
+  gather_facts: true
+  become: true
+  roles:
+    - dns-server
+
+- name: Configure Database Server
+  hosts: database
+  gather_facts: true
+  become: true
+  roles:
+    - mariadb
+
+- name: Configure Web Servers
+  hosts: webservers
+  gather_facts: true
+  become: true
+  roles:
+    - apache
+
+- name: Configure Load Balancer
+  hosts: loadbalancer
+  gather_facts: true
+  become: true
+  roles:
+    - haproxy
+
+- name: Configure Monitoring Server
+  hosts: monitoring
+  gather_facts: true
+  become: true
+  roles:
+    - nagios
+
+- name: Configure Docker Server
+  hosts: docker
+  gather_facts: true
+  become: true
+  roles:
+    - docker
+
+- name: Configure Kubernetes Server
+  hosts: kubernetes
+  gather_facts: true
+  become: true
+  roles:
+    - kubernetes

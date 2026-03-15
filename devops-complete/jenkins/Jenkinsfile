@@ -1,0 +1,194 @@
+// Jenkins Pipeline for DevOps Lab
+
+pipeline {
+    agent any
+    
+    environment {
+        AWS_REGION = 'us-east-1'
+        TERRAFORM_VERSION = '1.5.0'
+        ANSIBLE_VERSION = '2.14.0'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    env.GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                }
+            }
+        }
+        
+        stage('Terraform Init') {
+            steps {
+                dir('terraform') {
+                    sh '''
+                        terraform init -upgrade
+                        terraform version
+                    '''
+                }
+            }
+        }
+        
+        stage('Terraform Validate') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform validate'
+                }
+            }
+        }
+        
+        stage('Terraform Plan') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform plan -out=tfplan'
+                }
+                archiveArtifacts artifacts: 'terraform/tfplan', fingerprint: true
+            }
+        }
+        
+        stage('Terraform Apply') {
+            when {
+                branch 'main'
+            }
+            steps {
+                dir('terraform') {
+                    sh 'terraform apply -auto-approve tfplan'
+                }
+            }
+        }
+        
+        stage('Setup Ansible') {
+            steps {
+                sh '''
+                    pip install ansible
+                    ansible --version
+                '''
+            }
+        }
+        
+        stage('Ansible Base Security') {
+            steps {
+                sh '''
+                    cd ansible
+                    ansible-playbook -i inventory/hosts playbooks/01-base-security.yml --ask-vault-pass
+                '''
+            }
+        }
+        
+        stage('Ansible DNS Server') {
+            steps {
+                sh '''
+                    cd ansible
+                    ansible-playbook -i inventory/hosts playbooks/02-dns-server.yml
+                '''
+            }
+        }
+        
+        stage('Ansible Web & LB') {
+            steps {
+                sh '''
+                    cd ansible
+                    ansible-playbook -i inventory/hosts playbooks/03-webservers.yml
+                    ansible-playbook -i inventory/hosts playbooks/04-loadbalancer.yml
+                '''
+            }
+        }
+        
+        stage('Ansible Database') {
+            steps {
+                sh '''
+                    cd ansible
+                    ansible-playbook -i inventory/hosts playbooks/05-database.yml
+                '''
+            }
+        }
+        
+        stage('Ansible Monitoring') {
+            steps {
+                sh '''
+                    cd ansible
+                    ansible-playbook -i inventory/hosts playbooks/06-nrpe-client.yml
+                    ansible-playbook -i inventory/hosts playbooks/07-nagios-server.yml
+                '''
+            }
+        }
+        
+        stage('Ansible Docker') {
+            steps {
+                sh '''
+                    cd ansible
+                    ansible-playbook -i inventory/hosts playbooks/08-docker.yml
+                '''
+            }
+        }
+        
+        stage('Ansible Kubernetes') {
+            steps {
+                sh '''
+                    cd ansible
+                    ansible-playbook -i inventory/hosts playbooks/09-kubernetes.yml
+                '''
+            }
+        }
+        
+        stage('Docker Build') {
+            steps {
+                sh '''
+                    cd docker
+                    docker build -t devops-app:${GIT_COMMIT_SHORT} .
+                    docker tag devops-app:${GIT_COMMIT_SHORT} devops-app:latest
+                '''
+            }
+        }
+        
+        stage('Security Scan') {
+            steps {
+                sh '''
+                    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                        aquasec/trivy:latest image --severity HIGH,CRITICAL devops-app:latest
+                '''
+            }
+        }
+        
+        stage('Deploy to AWS') {
+            when {
+                branch 'main'
+            }
+            steps {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    sh '''
+                        aws ec2 describe-instances --region $AWS_REGION
+                        aws elbv2 describe-load-balancers --region $AWS_REGION
+                    '''
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo 'Cleaning workspace...'
+            cleanWs()
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+            emailext(
+                subject: "Jenkins Pipeline Success: ${env.JOB_NAME}",
+                body: "The pipeline completed successfully for commit ${GIT_COMMIT_SHORT}",
+                to: '${DEFAULT_RECIPIENTS}'
+            )
+        }
+        failure {
+            echo 'Pipeline failed!'
+            emailext(
+                subject: "Jenkins Pipeline Failed: ${env.JOB_NAME}",
+                body: "The pipeline failed for commit ${GIT_COMMIT_SHORT}. Check logs for details.",
+                to: '${DEFAULT_RECIPIENTS}'
+            )
+        }
+    }
+}

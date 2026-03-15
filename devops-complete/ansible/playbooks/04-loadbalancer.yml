@@ -1,0 +1,99 @@
+---
+# Load Balancer (HAProxy) Playbook
+
+- name: Configure HAProxy Load Balancer
+  hosts: loadbalancer
+  become: true
+  
+  tasks:
+    - name: Install HAProxy
+      dnf:
+        name: haproxy
+        state: present
+
+    - name: Configure HAProxy
+      copy:
+        dest: /etc/haproxy/haproxy.cfg
+        content: |
+          # HAProxy Configuration for DevOps Lab
+          
+          global
+              log         127.0.0.1 local2
+              chroot      /var/lib/haproxy
+              pidfile     /var/run/haproxy.pid
+              maxconn     4000
+              user        haproxy
+              group       haproxy
+              daemon
+              stats socket /var/run/haproxy.sock mode 600 level admin
+              stats timeout 2m
+              stats maxconn 3
+          
+          defaults
+              mode                    http
+              log                     global
+              option                  httplog
+              option                  dontlognull
+              option                  http-server-close
+              option                  forwardfor except 127.0.0.0/8
+              option                  redispatch
+              retries                 3
+              timeout http-request    10s
+              timeout queue           1m
+              timeout connect         10s
+              timeout client          1m
+              timeout server          1m
+              timeout http-keep-alive 10s
+              timeout check           10s
+              maxconn                 3000
+          
+          # HAProxy Statistics Page
+          listen stats
+              bind :8888
+              mode http
+              stats enable
+              stats uri /stats
+              stats refresh 30s
+              stats auth admin:password
+              stats admin if TRUE
+          
+          # Frontend for Web Application
+          frontend http_front
+              bind *:80
+              mode http
+              default_backend web_back
+          
+          # Backend for Web Servers (Round Robin Load Balancing)
+          backend web_back
+              mode http
+              balance roundrobin
+              option httpchk
+              option forwardfor
+              http-check expect status 200
+              server web1 192.168.100.31:80 check inter 2000 rise 2 fall 3
+              server web2 192.168.100.32:80 check inter 2000 rise 2 fall 3
+              server web3 192.168.100.33:80 check inter 2000 rise 2 fall 3
+        mode: '0644'
+      notify: restart haproxy
+
+    - name: Enable and start haproxy
+      service:
+        name: haproxy
+        state: started
+        enabled: yes
+
+    - name: Configure firewall for HTTP/HTTPS
+      firewalld:
+        service: "{{ item }}"
+        permanent: yes
+        state: enabled
+      loop:
+        - http
+        - https
+      failed_when: false
+
+  handlers:
+    - name: restart haproxy
+      service:
+        name: haproxy
+        state: restarted

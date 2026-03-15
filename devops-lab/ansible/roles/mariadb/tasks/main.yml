@@ -1,0 +1,79 @@
+---
+# MariaDB Database Server Role
+
+- name: Install MariaDB server
+  dnf:
+    name:
+      - mariadb-server
+      - mariadb
+      - mariadb-backup
+      - mariadb-common
+    state: present
+
+- name: Configure MariaDB
+  template:
+    src: my.cnf.j2
+    dest: /etc/my.cnf.d/server.cnf
+    mode: '0644'
+  notify: restart mariadb
+
+- name: Enable and start MariaDB
+  service:
+    name: mariadb
+    state: started
+    enabled: yes
+
+- name: Wait for MariaDB to be ready
+  wait_for:
+    port: 3306
+    delay: 5
+
+- name: Create database
+  mysql_db:
+    name: devops_lab
+    state: present
+
+- name: Create database user
+  mysql_user:
+    name: devops_user
+    password: "password"
+    priv: "devops_lab.*:ALL"
+    state: present
+
+- name: Import sample data
+  mysql_db:
+    name: devops_lab
+    state: import
+    target: /tmp/sample_data.sql
+  ignore_errors: yes
+
+- name: Create sample tables and data
+  mysql_db:
+    name: devops_lab
+    state: present
+  ignore_errors: yes
+
+- name: Execute SQL to create sample data
+  community.mysql.mysql_query:
+    login_user: root
+    login_password: ''
+    query:
+      - "CREATE DATABASE IF NOT EXISTS devops_lab;"
+      - "USE devops_lab;"
+      - "CREATE TABLE IF NOT EXISTS employees (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), state VARCHAR(50), department VARCHAR(50), salary DECIMAL(10,2));"
+      - "INSERT INTO employees (name, state, department, salary) VALUES ('John Doe', 'California', 'Engineering', 75000.00);"
+      - "INSERT INTO employees (name, state, department, salary) VALUES ('Jane Smith', 'Texas', 'Sales', 65000.00);"
+      - "INSERT INTO employees (name, state, department, salary) VALUES ('Bob Johnson', 'New York', 'Marketing', 70000.00);"
+      - "INSERT INTO employees (name, state, department, salary) VALUES ('Alice Williams', 'Florida', 'HR', 60000.00);"
+      - "INSERT INTO employees (name, state, department, salary) VALUES ('Charlie Brown', 'Illinois', 'Engineering', 80000.00);"
+      - "INSERT INTO employees (name, state, department, salary) VALUES ('Diana Ross', 'Georgia', 'Sales', 72000.00);"
+      - "INSERT INTO employees (name, state, department, salary) VALUES ('Edward Lee', 'Washington', 'Operations', 68000.00);"
+      - "INSERT INTO employees (name, state, department, salary) VALUES ('Fiona Chen', 'California', 'Engineering', 85000.00);"
+      - "INSERT INTO employees (name, state, department, salary) VALUES ('George Wilson', 'Ohio', 'Marketing', 63000.00);"
+
+- name: Configure firewall for MySQL
+  firewalld:
+    service: mysql
+    permanent: yes
+    state: enabled
+  failed_when: false

@@ -1,0 +1,24 @@
+FROM rockylinux:9
+
+# Install required packages
+RUN dnf install -y httpd php php-mysql mysql && \
+    dnf clean all
+
+# Create web directory
+RUN mkdir -p /var/www/html
+
+# Copy application files
+COPY rds.conf.php /var/www/html/
+COPY lab-app.php /var/www/html/ 2>/dev/null || true
+COPY *.html /var/www/html/ 2>/dev/null || true
+COPY *.php /var/www/html/ 2>/dev/null || true
+COPY *.jpg *.png *.css *.js /var/www/html/ 2>/dev/null || true
+
+# Set ownership
+RUN chown -R apache:apache /var/www/html
+
+# Expose port
+EXPOSE 80
+
+# Start Apache
+CMD ["/usr/sbin/httpd", "-D", "FOREGROUND"]

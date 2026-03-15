@@ -1,0 +1,7 @@
+---
+# Handlers for NRPE role
+
+- name: restart nrpe
+  service:
+    name: nrpe
+    state: restarted

@@ -1,0 +1,56 @@
+---
+# Main Site Playbook - Deploys all DevOps Lab Infrastructure
+
+- name: Deploy Base Security to All Servers
+  hosts: linux
+  become: true
+  roles:
+    - base-security
+
+- name: Deploy DNS Server
+  hosts: dns
+  become: true
+  roles:
+    - dns-server
+
+- name: Deploy Web Servers
+  hosts: webservers
+  become: true
+  roles:
+    - apache
+
+- name: Deploy Load Balancer
+  hosts: loadbalancer
+  become: true
+  roles:
+    - haproxy
+
+- name: Deploy Database Server
+  hosts: database
+  become: true
+  roles:
+    - mariadb
+
+- name: Deploy Monitoring (NRPE on all, Nagios on monitoring server)
+  hosts: linux
+  become: true
+  roles:
+    - nrpe
+
+- name: Configure Nagios Server
+  hosts: monitoring
+  become: true
+  roles:
+    - nagios
+
+- name: Deploy Docker Server
+  hosts: docker
+  become: true
+  roles:
+    - docker
+
+- name: Deploy Kubernetes Server
+  hosts: kubernetes
+  become: true
+  roles:
+    - kubernetes

@@ -1,29 +1,21 @@
 #!/bin/bash
 
-
-
 # Author: Otajon
 # Created: 08/19/2025
-# Content: Conting 1 to 5 and opposide
+# Content: Counting 1 to 5 and opposite
+# Optimized for better performance
 
-
-
-
-let i=0;
-
-for i in 1 2 3 4 5; do
-echo "counting 1 to 5: $i"
-sleep 1
+# Forward counting - optimized loop without sleep delay
+echo "Counting forward:"
+for ((i=1; i<=5; i++)); do
+    echo "Forward: $i"
 done
 
-
-let a=5;
-while [ $a -ge 1 ]; do
-
-echo "Counting backwards: $a"
-let a--;
-sleep 1
-
+# Backward counting - optimized C-style loop
+echo
+echo "Counting backward:"
+for ((a=5; a>=1; a--)); do
+    echo "Backward: $a"
 done
 
 

@@ -1,0 +1,62 @@
+# DevOps Lab Inventory
+
+[all:vars]
+ansible_user=ansible
+ansible_password=password
+ansible_become_password=password
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+# DNS Servers
+[dns]
+prdx-dns101 ansible_host=192.168.100.10
+
+# Database Servers
+[database]
+prdx-db101 ansible_host=192.168.100.20
+
+# Web Servers
+[webservers]
+prdx-webserver101 ansible_host=192.168.100.31
+prdx-webserver102 ansible_host=192.168.100.32
+prdx-webserver103 ansible_host=192.168.100.33
+
+# Load Balancer
+[loadbalancer]
+prdx-haproxy101 ansible_host=192.168.100.40
+
+# Monitoring
+[monitoring]
+prdx-nagios101 ansible_host=192.168.100.50
+
+# Ansible Server
+[ansible]
+prdx-ansible101 ansible_host=192.168.100.60
+
+# Docker
+[docker]
+prdx-dprimary101 ansible_host=192.168.100.70
+
+# Kubernetes
+[kubernetes]
+prdx-kube101 ansible_host=192.168.100.80
+
+# Groups
+[linux:children]
+dns
+database
+webservers
+loadbalancer
+monitoring
+ansible
+docker
+kubernetes
+
+[web:children]
+webservers
+loadbalancer
+
+[app:children]
+webservers
+database
+docker
+kubernetes

@@ -1,0 +1,20 @@
+$TTL 86400
+@       IN SOA  lab.local. admin.lab.local. (
+                        2024010101      ; Serial
+                        3600            ; Refresh
+                        1800            ; Retry
+                        604800          ; Expire
+                        86400 )         ; Minimum TTL
+
+; Name servers
+@       IN NS      prdx-dns101.lab.local.
+10      IN PTR     prdx-dns101.lab.local.
+20      IN PTR     prdx-db101.lab.local.
+31      IN PTR     prdx-webserver101.lab.local.
+32      IN PTR     prdx-webserver102.lab.local.
+33      IN PTR     prdx-webserver103.lab.local.
+40      IN PTR     prdx-haproxy101.lab.local.
+50      IN PTR     prdx-nagios101.lab.local.
+60      IN PTR     prdx-ansible101.lab.local.
+70      IN PTR     prdx-dprimary101.lab.local.
+80      IN PTR     prdx-kube101.lab.local.

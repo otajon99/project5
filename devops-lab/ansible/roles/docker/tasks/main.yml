@@ -1,0 +1,99 @@
+---
+# Docker Server Role
+
+- name: Install Docker dependencies
+  dnf:
+    name:
+      - dnf-plugins-core
+      - python3-pip
+    state: present
+
+- name: Add Docker repository
+  get_url:
+    url: https://download.docker.com/linux/centos/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
+    mode: '0644'
+
+- name: Install Docker Engine
+  dnf:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+
+- name: Start and enable Docker
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Configure Docker daemon
+  template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    mode: '0644'
+  notify: restart docker
+
+- name: Download application archive
+  get_url:
+    url: https://aws-tc-largeobjects.s3-us-west-2.amazonaws.com/CUR-TF-200-ACACAD/studentdownload/lab-app.tgz
+    dest: /tmp/lab-app.tgz
+    mode: '0644'
+  ignore_errors: yes
+
+- name: Extract application files
+  unarchive:
+    src: /tmp/lab-app.tgz
+    dest: /tmp/
+    creates: /tmp/rds.conf.php
+  ignore_errors: yes
+
+- name: Create Docker image directory
+  file:
+    path: /opt/docker-app
+    state: directory
+    mode: '0755'
+
+- name: Create Dockerfile
+  template:
+    src: Dockerfile.j2
+    dest: /opt/docker-app/Dockerfile
+    mode: '0644'
+
+- name: Create docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: /opt/docker-app/docker-compose.yml
+    mode: '0644'
+
+- name: Build Docker image
+  docker_image:
+    name: devops-app
+    tag: latest
+    source: build
+    build:
+      path: /opt/docker-app
+    state: present
+  ignore_errors: yes
+
+- name: Run Docker container
+  docker_container:
+    name: devops-app
+    image: devops-app:latest
+    state: started
+    ports:
+      - "8080:80"
+    restart_policy: always
+  ignore_errors: yes
+
+- name: Configure firewall for Docker
+  firewalld:
+    service: "{{ item }}"
+    permanent: yes
+    state: enabled
+  loop:
+    - http
+    - https
+  failed_when: false

@@ -1,0 +1,58 @@
+# HAProxy Configuration for DevOps Lab
+
+global
+    log         127.0.0.1 local2
+    chroot      /var/lib/haproxy
+    pidfile     /var/run/haproxy.pid
+    maxconn     4000
+    user        haproxy
+    group       haproxy
+    daemon
+    stats socket /var/run/haproxy.sock mode 600 level admin
+    stats socket /var/run/haproxy.sock.gid mode 600 level admin
+    stats timeout 2m
+    stats maxconn 3
+
+defaults
+    mode                    http
+    log                     global
+    option                  httplog
+    option                  dontlognull
+    option                  http-server-close
+    option                  forwardfor except 127.0.0.0/8
+    option                  redispatch
+    retries                 3
+    timeout http-request    10s
+    timeout queue           1m
+    timeout connect         10s
+    timeout client          1m
+    timeout server          1m
+    timeout http-keep-alive  10s
+    timeout check           10s
+    maxconn                 3000
+
+# HAProxy Statistics
+listen stats
+    bind :8888
+    mode http
+    stats enable
+    stats uri /stats
+    stats refresh 30s
+    stats auth admin:password
+
+# Frontend for Web Application
+frontend http_front
+    bind *:80
+    mode http
+    default_backend web_back
+
+# Backend for Web Servers
+backend web_back
+    mode http
+    balance roundrobin
+    option httpchk
+    option forwardfor
+    http-check expect status 200
+    server web1 192.168.100.31:80 check inter 2000 rise 2 fall 3
+    server web2 192.168.100.32:80 check inter 2000 rise 2 fall 3
+    server web3 192.168.100.33:80 check inter 2000 rise 2 fall 3

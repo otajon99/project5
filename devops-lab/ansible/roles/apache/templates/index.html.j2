@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevOps Lab - Web Server</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            text-align: center;
+        }
+        .server-id {
+            font-size: 120px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 30px 0;
+        }
+        .info-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .info-label {
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .info-value {
+            color: #333;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        .status {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+        .timestamp {
+            color: #999;
+            margin-top: 30px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="server-id">🌐</div>
+        <h1>DevOps Lab Web Server</h1>
+        
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Server Name</div>
+                <div class="info-value">{{ ansible_hostname }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">IP Address</div>
+                <div class="info-value">{{ ansible_host }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Server ID</div>
+                <div class="info-value">#{{ server_id }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Load Balancer</div>
+                <div class="info-value">HAProxy</div>
+            </div>
+        </div>
+        
+        <div class="status">✓ Server is running</div>
+        
+        <div class="timestamp">
+            <p>Server Time: <?php echo date('Y-m-d H:i:s'); ?></p>
+            <p>Powered by Apache on Rocky Linux</p>
+        </div>
+    </div>
+</body>
+</html>

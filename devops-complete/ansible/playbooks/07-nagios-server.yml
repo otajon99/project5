@@ -1,0 +1,229 @@
+---
+# Nagios Monitoring Server Playbook
+
+- name: Configure Nagios Server
+  hosts: monitoring
+  become: true
+  
+  tasks:
+    - name: Install Nagios Core and dependencies
+      dnf:
+        name:
+          - nagios
+          - nagios-plugins-all
+          - nagios-plugins-nrpe
+          - httpd
+          - php
+          - gd
+        state: present
+
+    - name: Create Nagios admin user
+      htpasswd:
+        path: /etc/nagios/passwd
+        name: nagiosadmin
+        password: "nagios"
+        create: yes
+
+    - name: Configure Apache for Nagios
+      copy:
+        dest: /etc/httpd/conf.d/nagios.conf
+        content: |
+          ScriptAlias /nagios/cgi-bin /usr/lib64/nagios/cgi
+          <Directory "/usr/lib64/nagios/cgi">
+              Options ExecCGI
+              AllowOverride None
+              Require all granted
+          </Directory>
+          Alias /nagios /usr/share/nagios/html
+          <Directory "/usr/share/nagios/html">
+              Options None
+              AllowOverride None
+              Require all granted
+          </Directory>
+        mode: '0644'
+      notify: restart httpd
+
+    - name: Create Nagios configuration directory
+      file:
+        path: /etc/nagios/conf.d
+        state: directory
+        mode: '0755'
+
+    - name: Configure hosts
+      copy:
+        dest: /etc/nagios/conf.d/hosts.cfg
+        content: |
+          define host {
+              use                     linux-server
+              host_name               prdx-dns101
+              alias                   DNS Server
+              address                 192.168.100.10
+          }
+          define host {
+              use                     linux-server
+              host_name               prdx-db101
+              alias                   Database Server
+              address                 192.168.100.20
+          }
+          define host {
+              use                     linux-server
+              host_name               prdx-webserver101
+              alias                   Web Server 1
+              address                 192.168.100.31
+          }
+          define host {
+              use                     linux-server
+              host_name               prdx-webserver102
+              alias                   Web Server 2
+              address                 192.168.100.32
+          }
+          define host {
+              use                     linux-server
+              host_name               prdx-webserver103
+              alias                   Web Server 3
+              address                 192.168.100.33
+          }
+          define host {
+              use                     linux-server
+              host_name               prdx-haproxy101
+              alias                   Load Balancer
+              address                 192.168.100.40
+          }
+          define host {
+              use                     linux-server
+              host_name               prdx-nagios101
+              alias                   Nagios Server
+              address                 192.168.100.50
+          }
+          define host {
+              use                     linux-server
+              host_name               prdx-ansible101
+              alias                   Ansible Server
+              address                 192.168.100.60
+          }
+          define host {
+              use                     linux-server
+              host_name               prdx-dprimary101
+              alias                   Docker Primary
+              address                 192.168.100.70
+          }
+          define host {
+              use                     linux-server
+              host_name               prdx-kube101
+              alias                   Kubernetes Master
+              address                 192.168.100.80
+          }
+        mode: '0644'
+      notify: restart nagios
+
+    - name: Configure services
+      copy:
+        dest: /etc/nagios/conf.d/services.cfg
+        content: |
+          # PING Service - All Hosts
+          define service {
+              use                     generic-service
+              host_name               prdx-dns101,prdx-db101,prdx-webserver101,prdx-webserver102,prdx-webserver103,prdx-haproxy101,prdx-nagios101,prdx-ansible101,prdx-dprimary101,prdx-kube101
+              service_description     PING
+              check_command          check_ping!100.0,20%!500.0,60%
+          }
+          
+          # CPU Load - All Hosts
+          define service {
+              use                     generic-service
+              host_name               prdx-dns101,prdx-db101,prdx-webserver101,prdx-webserver102,prdx-webserver103,prdx-haproxy101,prdx-nagios101,prdx-ansible101,prdx-dprimary101,prdx-kube101
+              service_description     CPU Load
+              check_command          check_nrpe!check_load
+          }
+          
+          # Memory Usage - All Hosts
+          define service {
+              use                     generic-service
+              host_name               prdx-dns101,prdx-db101,prdx-webserver101,prdx-webserver102,prdx-webserver103,prdx-haproxy101,prdx-nagios101,prdx-ansible101,prdx-dprimary101,prdx-kube101
+              service_description     Memory Usage
+              check_command          check_nrpe!check_memory
+          }
+          
+          # Disk Space - All Hosts
+          define service {
+              use                     generic-service
+              host_name               prdx-dns101,prdx-db101,prdx-webserver101,prdx-webserver102,prdx-webserver103,prdx-haproxy101,prdx-nagios101,prdx-ansible101,prdx-dprimary101,prdx-kube101
+              service_description     Disk Space
+              check_command          check_nrpe!check_disk
+          }
+          
+          # Current Users - All Hosts
+          define service {
+              use                     generic-service
+              host_name               prdx-dns101,prdx-db101,prdx-webserver101,prdx-webserver102,prdx-webserver103,prdx-haproxy101,prdx-nagios101,prdx-ansible101,prdx-dprimary101,prdx-kube101
+              service_description     Current Users
+              check_command          check_nrpe!check_users
+          }
+          
+          # HTTP Service - Web Servers
+          define service {
+              use                     generic-service
+              host_name               prdx-webserver101,prdx-webserver102,prdx-webserver103
+              service_description     HTTP Service
+              check_command          check_tcp!80
+          }
+          
+          # HTTP Service - Load Balancer
+          define service {
+              use                     generic-service
+              host_name               prdx-haproxy101
+              service_description     HTTP Service
+              check_command          check_tcp!80
+          }
+          
+          # DNS Service - DNS Server
+          define service {
+              use                     generic-service
+              host_name               prdx-dns101
+              service_description     DNS Service
+              check_command          check_dns
+          }
+          
+          # MySQL Service - Database Server
+          define service {
+              use                     generic-service
+              host_name               prdx-db101
+              service_description     MySQL Service
+              check_command          check_tcp!3306
+          }
+          
+          # SSH Service - All Hosts
+          define service {
+              use                     generic-service
+              host_name               prdx-dns101,prdx-db101,prdx-webserver101,prdx-webserver102,prdx-webserver103,prdx-haproxy101,prdx-nagios101,prdx-ansible101,prdx-dprimary101,prdx-kube101
+              service_description     SSH Service
+              check_command          check_ssh
+          }
+        mode: '0644'
+      notify: restart nagios
+
+    - name: Enable and start services
+      service:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop:
+        - nagios
+        - httpd
+
+    - name: Allow HTTP through firewall
+      firewalld:
+        service: http
+        permanent: yes
+        state: enabled
+
+  handlers:
+    - name: restart nagios
+      service:
+        name: nagios
+        state: restarted
+
+    - name: restart httpd
+      service:
+        name: httpd
+        state: restarted

@@ -1,0 +1,122 @@
+---
+# Docker Server Playbook
+
+- name: Configure Docker Server
+  hosts: docker
+  become: true
+  
+  tasks:
+    - name: Install Docker dependencies
+      dnf:
+        name:
+          - dnf-plugins-core
+          - python3-pip
+        state: present
+
+    - name: Add Docker repository
+      get_url:
+        url: https://download.docker.com/linux/centos/docker-ce.repo
+        dest: /etc/yum.repos.d/docker-ce.repo
+        mode: '0644'
+
+    - name: Install Docker Engine
+      dnf:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+
+    - name: Start and enable Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Configure Docker daemon
+      copy:
+        dest: /etc/docker/daemon.json
+        content: |
+          {
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "10m",
+              "max-file": "3"
+            },
+            "storage-driver": "overlay2",
+            "live-restore": true
+          }
+        mode: '0644'
+      notify: restart docker
+
+    - name: Create app directory
+      file:
+        path: /opt/docker-app
+        state: directory
+        mode: '0755'
+
+    - name: Download application archive
+      get_url:
+        url: https://aws-tc-largeobjects.s3-us-west-2.amazonaws.com/CUR-TF-200-ACACAD/studentdownload/lab-app.tgz
+        dest: /tmp/lab-app.tgz
+        mode: '0644'
+      ignore_errors: yes
+
+    - name: Extract application files
+      unarchive:
+        src: /tmp/lab-app.tgz
+        dest: /opt/docker-app/
+        creates: /opt/docker-app/rds.conf.php
+      ignore_errors: yes
+
+    - name: Create Dockerfile
+      copy:
+        dest: /opt/docker-app/Dockerfile
+        content: |
+          FROM rockylinux:9
+          
+          RUN dnf install -y httpd php php-mysql && \
+              dnf clean all
+          
+          RUN mkdir -p /var/www/html
+          
+          COPY rds.conf.php /var/www/html/ 2>/dev/null || true
+          
+          EXPOSE 80
+          
+          CMD ["/usr/sbin/httpd", "-D", "FOREGROUND"]
+        mode: '0644'
+
+    - name: Build Docker image
+      community.docker.docker_image:
+        name: devops-app
+        tag: latest
+        build:
+          path: /opt/docker-app
+        source: build
+        state: present
+      ignore_errors: yes
+
+    - name: Run Docker container
+      community.docker.docker_container:
+        name: devops-app
+        image: devops-app:latest
+        state: started
+        ports:
+          - "8080:80"
+        restart_policy: always
+      ignore_errors: yes
+
+    - name: Configure firewall for HTTP
+      firewalld:
+        service: http
+        permanent: yes
+        state: enabled
+      failed_when: false
+
+  handlers:
+    - name: restart docker
+      service:
+        name: docker
+        state: restarted

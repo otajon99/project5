@@ -1,0 +1,141 @@
+---
+# Base Security Playbook - Applied to ALL servers
+
+- name: Configure Base Security
+  hosts: linux
+  become: true
+  vars:
+    ansible_user: ansible
+    ansible_password: password
+    root_password: "password"
+    common_packages:
+      - bind-utils
+      - man
+      - man-pages
+      - mlocate
+      - sysstat
+      - vim
+      - wget
+      - curl
+      - git
+      - net-tools
+      - telnet
+  
+  tasks:
+    # SELinux Configuration
+    - name: Disable SELinux
+      selinux:
+        state: disabled
+      ignore_errors: yes
+
+    - name: Set SELinux to permissive
+      command: setenforce 0
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Configure SELinux config
+      lineinfile:
+        path: /etc/selinux/config
+        regexp: '^SELINUX='
+        line: 'SELINUX=disabled'
+
+    # Firewall Configuration
+    - name: Install firewalld
+      dnf:
+        name: firewalld
+        state: present
+
+    - name: Start and enable firewalld
+      service:
+        name: firewalld
+        state: started
+        enabled: yes
+
+    - name: Allow SSH through firewall
+      firewalld:
+        service: ssh
+        permanent: yes
+        state: enabled
+
+    # SSH Security
+    - name: Disable root SSH login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+      notify: restart sshd
+
+    - name: Disable SSH password authentication (optional - comment if needed)
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PasswordAuthentication'
+        line: '#PasswordAuthentication no'
+      notify: restart sshd
+
+    - name: Ensure SSH uses DNS
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?UseDNS'
+        line: 'UseDNS no'
+      notify: restart sshd
+
+    # Install Common Packages
+    - name: Install common packages
+      dnf:
+        name: "{{ common_packages }}"
+        state: present
+
+    # User Configuration
+    - name: Set root password
+      user:
+        name: root
+        password: "{{ root_password | password_hash('sha512') }}"
+
+    - name: Create ansible user
+      user:
+        name: ansible
+        password: "{{ ansible_password | password_hash('sha512') }}"
+        shell: /bin/bash
+        groups: wheel
+        append: yes
+
+    - name: Configure sudo for ansible user (no password)
+      lineinfile:
+        path: /etc/sudoers.d/ansible
+        line: 'ansible ALL=(ALL) NOPASSWD: ALL'
+        create: yes
+        mode: '0440'
+
+    # DNS Configuration
+    - name: Configure DNS resolv.conf
+      copy:
+        dest: /etc/resolv.conf
+        content: |
+          nameserver 192.168.100.10
+          nameserver 8.8.8.8
+          nameserver 8.8.4.4
+
+    - name: Add hosts file entries
+      lineinfile:
+        path: /etc/hosts
+        line: "{{ hostvars[item].ansible_host }} {{ item }} {{ item | replace('prdx-', '') }}.lab.local"
+      loop: "{{ groups['linux'] }}"
+
+    # Time Configuration
+    - name: Enable NTP service
+      service:
+        name: chronyd
+        state: started
+        enabled: yes
+
+    # Update locate database
+    - name: Update mlocate database
+      command: updatedb
+      changed_when: false
+      failed_when: false
+
+  handlers:
+    - name: restart sshd
+      service:
+        name: sshd
+        state: restarted

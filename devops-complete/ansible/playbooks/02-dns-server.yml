@@ -1,0 +1,132 @@
+---
+# DNS Server Playbook
+
+- name: Configure DNS Server (BIND)
+  hosts: dns
+  become: true
+  
+  tasks:
+    - name: Install BIND DNS server
+      dnf:
+        name:
+          - bind
+          - bind-utils
+        state: present
+
+    - name: Configure named.conf
+      copy:
+        dest: /etc/named.conf
+        content: |
+          options {
+              listen-on port 53 { any; };
+              directory "/var/named";
+              dump-file "/var/named/data/cache_dump.db";
+              statistics-file "/var/named/data/named_stats.txt";
+              allow-query { any; };
+              recursion yes;
+              dnssec-enable yes;
+              dnssec-validation yes;
+          };
+          
+          logging {
+              channel default_log {
+                  file "/var/named/data/named.log" versions 3 size 5m;
+                  severity info;
+                  print-time yes;
+                  print-category yes;
+              };
+              category default { default_log; };
+          };
+          
+          zone "lab.local" IN {
+              type master;
+              file "forward.lab.local";
+          };
+          
+          zone "100.168.192.in-addr.arpa" IN {
+              type master;
+              file "reverse.100.168.192.in-addr.arpa";
+          };
+          
+          include "/etc/named.rfc1912.zones";
+          include "/etc/named.root.key";
+        mode: '0644'
+      notify: restart named
+
+    - name: Create forward zone file
+      copy:
+        dest: /var/named/forward.lab.local
+        content: |
+          $TTL 86400
+          @       IN SOA  lab.local. admin.lab.local. (
+                          2024010101      ; Serial
+                          3600            ; Refresh
+                          1800            ; Retry
+                          604800          ; Expire
+                          86400 )         ; Minimum TTL
+          
+          @       IN NS      prdx-dns101.lab.local.
+          prdx-dns101     IN A       192.168.100.10
+          prdx-db101          IN A       192.168.100.20
+          prdx-webserver101   IN A       192.168.100.31
+          prdx-webserver102   IN A       192.168.100.32
+          prdx-webserver103   IN A       192.168.100.33
+          prdx-haproxy101     IN A       192.168.100.40
+          prdx-nagios101      IN A       192.168.100.50
+          prdx-ansible101     IN A       192.168.100.60
+          prdx-dprimary101    IN A       192.168.100.70
+          prdx-kube101        IN A       192.168.100.80
+        mode: '0640'
+        group: named
+      notify: restart named
+
+    - name: Create reverse zone file
+      copy:
+        dest: /var/named/reverse.100.168.192.in-addr.arpa
+        content: |
+          $TTL 86400
+          @       IN SOA  lab.local. admin.lab.local. (
+                          2024010101      ; Serial
+                          3600            ; Refresh
+                          1800            ; Retry
+                          604800          ; Expire
+                          86400 )         ; Minimum TTL
+          
+          @       IN NS      prdx-dns101.lab.local.
+          10      IN PTR     prdx-dns101.lab.local.
+          20      IN PTR     prdx-db101.lab.local.
+          31      IN PTR     prdx-webserver101.lab.local.
+          32      IN PTR     prdx-webserver102.lab.local.
+          33      IN PTR     prdx-webserver103.lab.local.
+          40      IN PTR     prdx-haproxy101.lab.local.
+          50      IN PTR     prdx-nagios101.lab.local.
+          60      IN PTR     prdx-ansible101.lab.local.
+          70      IN PTR     prdx-dprimary101.lab.local.
+          80      IN PTR     prdx-kube101.lab.local.
+        mode: '0640'
+        group: named
+      notify: restart named
+
+    - name: Set ownership on zone files
+      file:
+        path: /var/named/forward.lab.local
+        owner: named
+        group: named
+
+    - name: Enable and start named service
+      service:
+        name: named
+        state: started
+        enabled: yes
+
+    - name: Allow DNS through firewall
+      firewalld:
+        service: dns
+        permanent: yes
+        state: enabled
+
+  handlers:
+    - name: restart named
+      service:
+        name: named
+        state: restarted

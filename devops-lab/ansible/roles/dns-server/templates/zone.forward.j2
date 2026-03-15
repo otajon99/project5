@@ -1,0 +1,31 @@
+$TTL 86400
+@       IN SOA  lab.local. admin.lab.local. (
+                        2024010101      ; Serial
+                        3600            ; Refresh
+                        1800            ; Retry
+                        604800          ; Expire
+                        86400 )         ; Minimum TTL
+
+; Name servers
+@       IN NS      prdx-dns101.lab.local.
+prdx-dns101     IN A       192.168.100.10
+
+; A records for all servers
+prdx-db101          IN A       192.168.100.20
+prdx-webserver101   IN A       192.168.100.31
+prdx-webserver102   IN A       192.168.100.32
+prdx-webserver103   IN A       192.168.100.33
+prdx-haproxy101     IN A       192.168.100.40
+prdx-nagios101      IN A       192.168.100.50
+prdx-ansible101     IN A       192.168.100.60
+prdx-dprimary101    IN A       192.168.100.70
+prdx-kube101        IN A       192.168.100.80
+
+; Aliases
+dns                 IN CNAME   prdx-dns101.lab.local.
+db                  IN CNAME   prdx-db101.lab.local.
+web1                IN CNAME   prdx-webserver101.lab.local.
+web2                IN CNAME   prdx-webserver102.lab.local.
+web3                IN CNAME   prdx-webserver103.lab.local.
+lb                  IN CNAME   prdx-haproxy101.lab.local.
+nagios              IN CNAME   prdx-nagios101.lab.local.
