@@ -86,11 +86,26 @@
           
           RUN mkdir -p /var/www/html
           
-          COPY rds.conf.php /var/www/html/ 2>/dev/null || true
+          COPY index.html /var/www/html/
           
           EXPOSE 80
           
           CMD ["/usr/sbin/httpd", "-D", "FOREGROUND"]
+        mode: '0644'
+
+    - name: Create simple index.html
+      copy:
+        dest: /opt/docker-app/index.html
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head><title>DevOps Lab</title></head>
+          <body>
+          <h1>DevOps Lab Docker Container</h1>
+          <p>Server: {{ ansible_hostname }}</p>
+          <p>IP: {{ ansible_host }}</p>
+          </body>
+          </html>
         mode: '0644'
 
     - name: Build Docker image
@@ -101,7 +116,7 @@
 
     - name: Run Docker container
       shell: |
-        docker rm -f devops-app || true
+        docker rm -f devops-app 2>/dev/null || true
         docker run -d --name devops-app -p 8080:80 --restart=always devops-app:latest
       ignore_errors: yes
 
