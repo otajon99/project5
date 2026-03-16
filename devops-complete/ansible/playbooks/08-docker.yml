@@ -116,7 +116,8 @@
 
     - name: Run Docker container
       shell: |
-        docker rm -f devops-app 2>/dev/null || true
+        docker stop devops-app 2>/dev/null || true
+        docker rm devops-app 2>/dev/null || true
         docker run -d --name devops-app -p 8080:80 --restart=always devops-app:latest
       ignore_errors: yes
 
