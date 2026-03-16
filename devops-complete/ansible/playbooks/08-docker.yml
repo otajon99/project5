@@ -6,12 +6,16 @@
   become: true
   
   tasks:
+    - name: Remove conflicting podman-docker
+      dnf:
+        name: podman-docker
+        state: absent
+
     - name: Install Docker dependencies
       dnf:
         name:
           - dnf-plugins-core
           - python3-pip
-          - docker
         state: present
 
     - name: Add Docker repository
@@ -77,7 +81,7 @@
         content: |
           FROM rockylinux:9
           
-          RUN dnf install -y httpd php php-mysql && \
+          RUN dnf install -y httpd php php-mysqlnd && \
               dnf clean all
           
           RUN mkdir -p /var/www/html
