@@ -29,16 +29,16 @@ This project implements a complete DevOps infrastructure lab with:
 
 | Server | IP Address | CPU | RAM | Disk | Purpose |
 |--------|------------|-----|-----|------|---------|
-| prdx-dns101 | 192.168.100.10 | 1 | 1G | 5G | DNS Server |
-| prdx-db101 | 192.168.100.20 | 1 | 1G | 5G | MariaDB |
-| prdx-webserver101 | 192.168.100.31 | 1 | 1G | 5G | Web Server 1 |
-| prdx-webserver102 | 192.168.100.32 | 1 | 1G | 5G | Web Server 2 |
-| prdx-webserver103 | 192.168.100.33 | 1 | 1G | 5G | Web Server 3 |
-| prdx-haproxy101 | 192.168.100.40 | 1 | 1G | 5G | Load Balancer |
-| prdx-nagios101 | 192.168.100.50 | 1 | 1G | 5G | Monitoring |
-| prdx-ansible101 | 192.168.100.60 | 1 | 1G | 9G | Ansible Controller |
-| prdx-dprimary101 | 192.168.100.70 | 4 | 4G | 15G | Docker |
-| prdx-kube101 | 192.168.100.80 | 1 | 3G | 5G | Kubernetes |
+| prdx-dns101 | 10.31.3.11 | 1 | 1G | 5G | DNS Server |
+| prdx-db101 | 10.31.3.12 | 1 | 1G | 5G | MariaDB |
+| prdx-webserver101 | 10.31.3.21 | 1 | 1G | 5G | Web Server 1 |
+| prdx-webserver102 | 10.31.3.22 | 1 | 1G | 5G | Web Server 2 |
+| prdx-webserver103 | 10.31.3.23 | 1 | 1G | 5G | Web Server 3 |
+| prdx-haproxy101 | 10.31.3.30 | 1 | 1G | 5G | Load Balancer |
+| prdx-nagios101 | 10.31.3.40 | 1 | 1G | 5G | Monitoring |
+| prdx-ansible101 | 10.31.3.10 | 1 | 1G | 9G | Ansible Controller |
+| prdx-dprimary101 | 10.31.3.50 | 4 | 4G | 15G | Docker |
+| prdx-kube101 | 10.31.3.60 | 1 | 3G | 5G | Kubernetes |
 
 ---
 
@@ -48,7 +48,7 @@ This project implements a complete DevOps infrastructure lab with:
 
 ```bash
 # SSH to Ansible server
-ssh ansible@192.168.100.60
+ssh ansible@10.31.3.10
 
 # Test connectivity
 ansible all -i inventory/hosts -m ping
@@ -194,8 +194,8 @@ terraform destroy -auto-approve
 ### Step 2: Configure Ansible Server
 
 ```bash
-# On prdx-ansible101 (192.168.100.60)
-ssh root@192.168.100.60
+# On prdx-ansible101 (10.31.3.10)
+ssh root@10.31.3.10
 
 # Install Ansible
 dnf install -y epel-release
@@ -205,8 +205,8 @@ dnf install -y ansible
 ssh-keygen -t rsa -b 4096
 
 # Copy SSH key to all servers
-for ip in 10 20 31 32 33 40 50 60 70 80; do
-  ssh-copy-id root@192.168.100.$ip
+for ip in 10 11 12 21 22 23 30 40 50 60; do
+  ssh-copy-id root@10.31.3.$ip
 done
 ```
 
@@ -257,22 +257,22 @@ ansible all -m ping
 ansible all -m shell -a "cat /etc/resolv.conf"
 
 # Verify Load Balancer
-curl http://192.168.100.40
+curl http://10.31.3.30
 
 # Check Database
-ssh ansible@192.168.100.20
+ssh ansible@10.31.3.12
 mysql -u devops_user -p -e "USE devops_lab; SELECT * FROM employees;"
 
 # Access Nagios
-# URL: http://192.168.100.50/nagios
+# URL: http://10.31.3.40/nagios
 # User: nagiosadmin
 # Pass: nagios
 
 # Check Docker
-curl http://192.168.100.70:8080
+curl http://10.31.3.50:8080
 
 # Check Kubernetes
-ssh ansible@192.168.100.80
+ssh ansible@10.31.3.60
 minikube status
 minikube dashboard --url
 ```
@@ -303,10 +303,10 @@ aws rds describe-db-instances --region us-east-1
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
-| Load Balancer | http://192.168.100.40 | - |
-| HAProxy Stats | http://192.168.100.40:8888/stats | admin/password |
-| Nagios | http://192.168.100.50/nagios | nagiosadmin/nagios |
-| Docker App | http://192.168.100.70:8080 | - |
+| Load Balancer | http://10.31.3.30 | - |
+| HAProxy Stats | http://10.31.3.30:8888/stats | admin/password |
+| Nagios | http://10.31.3.40/nagios | nagiosadmin/nagios |
+| Docker App | http://10.31.3.50:8080 | - |
 | Kubernetes Dashboard | minikube dashboard --url | - |
 | AWS ALB | Check Terraform output | - |
 
@@ -361,7 +361,7 @@ ansible all -i inventory/hosts -m ping
 ansible all -i inventory/hosts -m ping -vvv
 
 # Check SSH key
-ssh -v ansible@192.168.100.X
+ssh -v ansible@10.31.3.X
 ```
 
 ### Terraform Issues
