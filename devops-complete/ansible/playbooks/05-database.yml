@@ -47,43 +47,27 @@
         port: 3306
         delay: 5
 
-    - name: Set root password for MariaDB
-      community.mysql.mysql_user:
-        name: root
-        password: ""
-        login_user: root
-        check_implicit_admin: yes
-        priv: "*.*:ALL,GRANT"
-      ignore_errors: yes
-
     - name: Create database
-      community.mysql.mysql_db:
-        name: devops_lab
-        state: present
+      shell: |
+        mysql -e "CREATE DATABASE IF NOT EXISTS devops_lab;"
 
     - name: Create database user
-      community.mysql.mysql_user:
-        name: devops_user
-        password: "password"
-        priv: "devops_lab.*:ALL"
-        state: present
+      shell: |
+        mysql -e "CREATE USER IF NOT EXISTS 'devops_user'@'localhost' IDENTIFIED BY 'password';"
+        mysql -e "GRANT ALL PRIVILEGES ON devops_lab.* TO 'devops_user'@'localhost';"
+        mysql -e "FLUSH PRIVILEGES;"
 
     - name: Create sample data with employees table
-      community.mysql.mysql_query:
-        login_user: root
-        login_password: ''
-        query:
-          - "CREATE DATABASE IF NOT EXISTS devops_lab;"
-          - "USE devops_lab;"
-          - "CREATE TABLE IF NOT EXISTS employees (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), state VARCHAR(50), department VARCHAR(50), salary DECIMAL(10,2), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
-          - "INSERT INTO employees (name, state, department, salary) VALUES ('John Doe', 'California', 'Engineering', 75000.00);"
-          - "INSERT INTO employees (name, state, department, salary) VALUES ('Jane Smith', 'Texas', 'Sales', 65000.00);"
-          - "INSERT INTO employees (name, state, department, salary) VALUES ('Bob Johnson', 'New York', 'Marketing', 70000.00);"
-          - "INSERT INTO employees (name, state, department, salary) VALUES ('Alice Williams', 'Florida', 'HR', 60000.00);"
-          - "INSERT INTO employees (name, state, department, salary) VALUES ('Charlie Brown', 'Illinois', 'Engineering', 80000.00);"
-          - "INSERT INTO employees (name, state, department, salary) VALUES ('Diana Ross', 'Georgia', 'Sales', 72000.00);"
-          - "INSERT INTO employees (name, state, department, salary) VALUES ('Edward Lee', 'Washington', 'Operations', 68000.00);"
-          - "INSERT INTO employees (name, state, department, salary) VALUES ('Fiona Chen', 'California', 'Engineering', 85000.00);"
+      shell: |
+        mysql devops_lab -e "CREATE TABLE IF NOT EXISTS employees (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), state VARCHAR(50), department VARCHAR(50), salary DECIMAL(10,2), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+        mysql devops_lab -e "INSERT INTO employees (name, state, department, salary) VALUES ('John Doe', 'California', 'Engineering', 75000.00);"
+        mysql devops_lab -e "INSERT INTO employees (name, state, department, salary) VALUES ('Jane Smith', 'Texas', 'Sales', 65000.00);"
+        mysql devops_lab -e "INSERT INTO employees (name, state, department, salary) VALUES ('Bob Johnson', 'New York', 'Marketing', 70000.00);"
+        mysql devops_lab -e "INSERT INTO employees (name, state, department, salary) VALUES ('Alice Williams', 'Florida', 'HR', 60000.00);"
+        mysql devops_lab -e "INSERT INTO employees (name, state, department, salary) VALUES ('Charlie Brown', 'Illinois', 'Engineering', 80000.00);"
+        mysql devops_lab -e "INSERT INTO employees (name, state, department, salary) VALUES ('Diana Ross', 'Georgia', 'Sales', 72000.00);"
+        mysql devops_lab -e "INSERT INTO employees (name, state, department, salary) VALUES ('Edward Lee', 'Washington', 'Operations', 68000.00);"
+        mysql devops_lab -e "INSERT INTO employees (name, state, department, salary) VALUES ('Fiona Chen', 'California', 'Engineering', 85000.00);"
 
     - name: Allow MySQL through firewall
       firewalld:
