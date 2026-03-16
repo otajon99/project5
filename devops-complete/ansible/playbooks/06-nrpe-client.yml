@@ -15,8 +15,11 @@
       dnf:
         name:
           - nrpe
-          - nagios-plugins-all
+          - nagios-plugins
           - nagios-plugins-nrpe
+          - nagios-plugins-disk
+          - nagios-plugins-load
+          - nagios-plugins-users
         state: present
 
     - name: Configure NRPE
@@ -25,7 +28,7 @@
         regexp: "{{ item.regexp }}"
         line: "{{ item.line }}"
       loop:
-        - { regexp: '^allowed_hosts=', line: 'allowed_hosts=127.0.0.1,192.168.100.50' }
+        - { regexp: '^allowed_hosts=', line: 'allowed_hosts=127.0.0.1,10.31.3.40' }
         - { regexp: '^dont_blame_nrpe=', line: 'dont_blame_nrpe=1' }
       notify: restart nrpe
 
