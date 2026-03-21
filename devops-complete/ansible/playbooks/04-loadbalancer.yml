@@ -70,9 +70,9 @@
               option httpchk
               option forwardfor
               http-check expect status 200
-              server web1 10.31.3.21:9000 check inter 2000 rise 2 fall 3
-              server web2 10.31.3.22:9000 check inter 2000 rise 2 fall 3
-              server web3 10.31.3.23:9000 check inter 2000 rise 2 fall 3
+              server web1 10.31.3.21:80 check inter 2000 rise 2 fall 3
+              server web2 10.31.3.22:80 check inter 2000 rise 2 fall 3
+              server web3 10.31.3.23:80 check inter 2000 rise 2 fall 3
         mode: '0644'
       notify: restart haproxy
 
