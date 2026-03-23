@@ -4,53 +4,44 @@
 - name: Deploy Base Security to All Servers
   hosts: linux
   become: true
-  roles:
-    - base-security
+  import_playbook: 01-base-security.yml
 
 - name: Deploy DNS Server
   hosts: dns
   become: true
-  roles:
-    - dns-server
+  import_playbook: 02-dns-server.yml
 
 - name: Deploy Web Servers
   hosts: webservers
   become: true
-  roles:
-    - apache
+  import_playbook: 03-webservers.yml
 
 - name: Deploy Load Balancer
   hosts: loadbalancer
   become: true
-  roles:
-    - haproxy
+  import_playbook: 04-loadbalancer.yml
 
 - name: Deploy Database Server
   hosts: database
   become: true
-  roles:
-    - mariadb
+  import_playbook: 05-database.yml
 
-- name: Deploy Monitoring (NRPE on all, Nagios on monitoring server)
+- name: Deploy NRPE Client (Monitoring)
   hosts: linux
   become: true
-  roles:
-    - nrpe
+  import_playbook: 06-nrpe-client.yml
 
 - name: Configure Nagios Server
   hosts: monitoring
   become: true
-  roles:
-    - nagios
+  import_playbook: 07-nagios-server.yml
 
 - name: Deploy Docker Server
   hosts: docker
   become: true
-  roles:
-    - docker
+  import_playbook: 08-docker.yml
 
 - name: Deploy Kubernetes Server
   hosts: kubernetes
   become: true
-  roles:
-    - kubernetes
+  import_playbook: 09-kubernetes.yml
